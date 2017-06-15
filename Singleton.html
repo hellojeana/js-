@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Singleton</title>
+	</head>
+	<body>
+		<h1>这里是Jeana的实验室之</h1>
+		<h2>js设计模式研究：单例模式-Singleton</h2>
+		<h2>GITHUB:github.com/hellojeana</h2>
+		<h2>案例改编自：参考书籍《JavaScript设计模式与开发实践》 作者：曾探</h2>
+		<button id="loginBtn">登录</button>
+	</body>
+	<script>
+		//单例：保证一个类只有一个实例，并提供一个访问它的全局访问点，如果存在直接返回，不存在则创建再返回
+		//例子1:实现单例模式（本段例子意义不大）
+		var Singleton = function( name ){//声明Singleton
+			this.name = name;
+			this.instance = null;//创建一个空实例
+		};
+		Singleton.prototype.getName = function(){
+			alert(this.name);	
+		};
+		Singleton.getInstance = function( name ){//通过getInstance获取唯一对象
+			if ( !this.instance ){
+				this.instance = new Singleton( name );
+			}//如果实例不存在，则创建新实例
+			return this.instance;
+		};
+		Singleton.destroyInstance = function(name){//摧毁实例
+			if(this.instance){
+				instance = null;
+			}
+		};
+		//测试
+		var a = Singleton.getInstance('sven500');
+		var b = Singleton.getInstance('sven2');
+		alert(b.name);//sven500，已经存在了sven500
+		alert(a.name == b.name); //true,说明a和b一直在操作同一个实例
+		
+		Singleton.destroyInstance();//摧毁实例
+		var c = Singleton.getInstance('sven3');
+		alert(c.name);//sven500
+		alert(c.instance);//null
+		//总结：一旦创建了一个实例，instance就一直存在于内存中，再次创建实例时只会简单返回上一个实例的引用
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////我是可爱的分割线////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////		
+		//例子2:使用CreateDiv类在页面中创建唯一节点
+		var CreateDiv = function(html){
+			if(instance){
+				return instance;
+			}//否则
+			this.html = html;
+		this.init = function(){//定义初始化方法
+			var div = document.createElement('div');
+			div.innerHTML = this.html;
+			document.body.appendChild(div);
+		};		
+			this.init();//执行初始化方法
+			return instance = this;
+			};
+		//测试
+		var a = CreateDiv('我是来自例子2的aaaa');
+		var b = CreateDiv('bbbb');
+		if(a == b){//true
+			alert('例子2中aaaa=bbbb!!!');
+		};//b返回的值同样是aaaa
+		//缺点：若是要将该类从单例类改为可以产生多个实例的类，就要改写函数，把控制创建唯一对象段落删除
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////我是可爱的分割线////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////	
+		//例子3：引入代理类（解决上述例子的缺点）普通类与代理类组合达到单例模式效果
+		var CreateDiv = function(html){
+			//if(instance){
+				//return instance;
+			//}//移除管理单例的代码
+			this.html = html;
+		this.init = function(){//定义初始化方法
+			var div = document.createElement('div');
+			div.innerHTML = this.html;
+			document.body.appendChild(div);
+		};		
+			this.init();//执行初始化方法
+			//return instance = this; 移除管理单例的代码
+			};
+		//引入代理类proxySingletonCreateDiv
+		var proxySingletonCreateDiv = (function(){
+			var instance;
+			return function(html){
+				if(!instance){
+					instance = new CreateDiv(html);
+				}
+				return instance;
+			}
+		})();
+		//测试
+		var a = proxySingletonCreateDiv('我是来自例子3的aaaa');
+		var b = proxySingletonCreateDiv('bbbb');
+		if(a == b){//true
+			alert('例子3中aaaa=bbbb!!!');
+		};//b返回的值同样是aaaa
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////我是可爱的分割线////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////	
+		//例子4：惰性单例（webQQ的浮窗弹出问题）
+		//思路一：页面加载完成时便创建好div弹窗，但处于隐藏状态，点击登录按钮才显示。
+		//缺点：若是不需要登录操作，一开始就被创建好会浪费DOM结点。
+		//思路二：用户点击登录按钮才开始创建浮窗。
+		//缺点：虽然达到了惰性的目的，但每次点击登录都会创建浮窗，失去了单例的效果。
+		//思路三：用一个变量来判断是否已经创建过登录浮窗。
+		var createLoginLayer = (function(){//建立隐藏浮窗
+			var divLayer ;
+			return function(){
+				if(!divLayer){//单例验证
+					divLayer = document.createElement('divLayer');
+					divLayer.innerHTML = '我是来自例子4的登录浮窗';
+					divLayer.style.display = 'none';
+					document.body.appendChild( divLayer );
+				}
+				return divLayer;
+			}	
+		})();
+		document.getElementById('loginBtn').onclick = function(){//点击可见事件
+			var loginLayer = createLoginLayer();
+			loginLayer.style.display = 'block';
+		};
+		//总结：虽然达成了预想的效果，但是把创建对象和管理单例都放在了creareLoginLayer里，仍然违反单一原则。
+		//若是还要创建更多的唯一的标签，我们还需要如法炮制的照抄很多遍。
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////我是可爱的分割线////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////	
+		//例子5:将不变的部分隔离并单独封装（解决例子4最后留下的问题）
+		//首先抽离管理单例的代码
+		var getSingle = function ( fn ){
+			var result;//将result存在闭包中，永远不会被销毁
+			return function(){
+				return result || ( result = fn .apply(this,arguments) );
+			}
+		};//我们只需要将createLoginLayer、createDiv、createXhr等值传入fn，就可以得到计算结果
+		  //如果result已经被赋值，将返回这个值
+		  //将创建对象封装在另一个方法里，使用时只需要将封装好的两个方法组合在一起就会有单例模式的奇效了！！
+		</script>
+</html>
