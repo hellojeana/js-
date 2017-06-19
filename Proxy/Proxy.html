@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Proxy</title>
+	</head>
+	<body>
+		<h1>这里是Jeana的实验室之</h1>
+		<h2>js设计模式研究：代理模式-Proxy</h2>
+		<h2>GITHUB:github.com/hellojeana</h2>
+		<h2>案例改编自：参考书籍《JavaScript设计模式与开发实践》 作者：曾探</h2>
+		
+	</body>
+	<script>
+		//代理模式：虚拟代理、缓存代理、防火墙代理、防火墙代理、远程代理、保护代理、智能引用代理、写时复制代理
+		//1、虚拟代理
+		//什么是代理？当A通过B将请求传递给C时，B就成为了A与B之间的代理。
+		//什么是虚拟代理？当创建C时需要很大开销时，B可以将A的请求延迟到真正需要C的时候再创建。
+		//例子1:虚拟代理实现图片预加载
+		//有时候图片过大或者网络不佳，图片的位置往往一片空白。
+		//常见做法是用一张loading图片占位，然后异步加载图片，加载完毕再将它填充到img节点里。
+		//首先创建一个本体，负责在页面中创建img标签，并且提供一个对外的setSrc接口，调用该接口就可以给img设置src属性
+		var myImage = (function(){
+			var imgNode = document.createElement('img');
+			document.body.appendChild( imgNode );//向img节点添加最后一个子节点
+			
+			return {
+				setSrc:function( src ){
+					imgNode.src = src;
+				}
+			}
+		})();
+		//可取消注释查看效果myImage.setSrc('https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1497851675599&di=6ac025b7e7f24c50a535636b58b1715f&imgtype=0&src=http%3A%2F%2Fpic.58pic.com%2F58pic%2F16%2F42%2F96%2F56e58PICAu9_1024.jpg');
+		//当我们把网速调为5kb/s时，图片被加载好之前就会有一段很长的空白时间
+		//下面我们引入代理对象proxyImage，在图片加载好之前，页面中会显示一张占位的loading.gif来提示用户图片正在被加载
+		var proxyImage = (function(){
+			var img = new Image;
+			img.onload = function(){
+				myImage.setSrc( this.src );
+			}
+			return{
+				setSrc:function( src ){
+					myImage.setSrc('file:loading.gif');
+					img.src = src;
+				}
+			}
+		})();
+		//可将下行注释掉，取消33行的注释查看效果
+		proxyImage.setSrc('https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1497852308585&di=b6585e0af1c0dbdb11022473a5662f65&imgtype=0&src=http%3A%2F%2Fpic.baike.soso.com%2Fp%2F20130515%2F20130515150325-379335333.jpg');
+		//当然，不使用代理同样可以实现图片预加载，但使用代理遵循的是面向对象设计原则之————单一职责原则
+		//所谓职责是指类变化的原因。如果一个类有多于一个的动机被改变，那么这个类就具有多于一个的职责。
+		//而单一职责原则就是指一个类或者模块应该有且只有一个改变的原因。
+		//不使用代理一个类可能会有多个改变的原因，设计可能会遭到意外的破坏
+		//而使用代理能够将行为分不到细粒度的对象中，这，也就是代理的意义
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////我是可爱的分割线////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////		
+		//代理和本体接口的一致性
+		//当有一天我们不需要代理的时候，可以直接请求本体，那时就可以直接将代理替换为本体
+		//例子2:代理与本体使用一致接口
+		var myImage_2 = ( function(){
+			var imgNode_2 = document.createElement( 'img' );
+			document.body.appendChild( imgNode_2 );
+			return function( src ){
+				imgNode_2.src = src;
+			}
+		})();
+		var proxyImage_2 = (function(){
+			var img_2 = new Image;
+			img_2.onload = function(){
+				myImage_2( this.src );
+			}
+			return function( src ){
+				myImage_2('file:loading.gif');
+				img_2.src = src;
+			}
+		})();
+		proxyImage_2('https://timgsa.baidu.com/timg?image&quality=80&size=b10000_10000&sec=1497849714&di=a6f22b85f2112c36cf77706a47bb79a5&src=http://gnat-tang-shared-image.qiniudn.com/octocat/jean-luc-picat.jpg');
+		
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////我是可爱的分割线////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////	
+		//2、缓存代理
+		//缓存代理可以为一些开销大的运算结果提供暂时的存储，在下次运算时，如果传递进来的参数和之前一致，就可以直接返回前面存储的运算结果
+		//例子3:在计算乘积时加入缓存代理函数（我们假设计算乘积是开销大的运算）
+		//先创建乘积函数
+		var mult = function(){
+			console.log( '开始计算乘积' );
+			var a = 1;
+			for ( var i = 0,l = arguments.length; i < l; i++){
+				a = a * arguments[i];
+			}
+			return a;
+		};
+		//测试
+		var b = mult(2,3);
+		alert('我是例子3的测试结果一：'+b);
+		var c = mult(1,4,5);
+		alert('我是例子3的测试结果二：'+c);
+		//现在加入缓存代理函数
+		var proxyMult = (function(){
+			var cache = {};
+			return function(){
+				var args = Array.prototype.join.call( arguments,',' );
+				//用Array.join来替换argument，Array.join将arguments数组连接起来构成了字符串，并用‘，’分隔
+				if ( args in cache ){//如果字符串在缓存中
+					return cache[ args ];//则返回缓存中的数组
+				}
+				return cache[ args ] = mult.apply( this,arguments );
+				//否则返回计算后并加入缓存的字符串
+			}
+		})();
+		//测试
+		var d = proxyMult(2,4,5);
+		alert('我是例子3的测试结果三：'+d);
+		var e = proxyMult(2,4,5,6);
+		alert('我是例子3的测试结果三：'+e);
+		//缓存代理可以用于ajax异步请求数据，例如分页时，同一页的数据理论上只需要拉取一次，下次再请求同一页可以直接使用之前的数据
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////我是可爱的分割线////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////	
+		//其他代理模式
+		//3、防火墙代理
+		//控制网络资源的访问，保护主体不让“坏人”接近。
+		//4、远程代理
+		//为一个对象在不同的地址空间提供局部代表。
+		//5、保护代理
+		//用于对象应该有不同访问权限的情况。
+		//6、智能引用代理
+		//取代了简单的指针，他能在访问对象时执行一些附加操作，比如计算一个对象被引用的次数
+		//7、写时复制代理
+		//通常用于复制一个庞大对象的情况，延迟了复制的过程，当对象真正被修改时，才对它进行复制操作
+		</script>
+</html>
