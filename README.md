@@ -5,5 +5,6 @@
 ·文件名-模式对照</br>
 Singleton-单例模式</br>
 Strategy-策略模式</br>
+Proxy-缓存模式</br>
 ![image](https://github.com/hellojeana/Odds-and-ends/blob/2d43618463d7c92240e84ef95d42730f0488143f/js-DP-img/Singleton-1.png)</br>
 ![image](https://github.com/hellojeana/Odds-and-ends/blob/2d43618463d7c92240e84ef95d42730f0488143f/js-DP-img/Singleton-2.png)
